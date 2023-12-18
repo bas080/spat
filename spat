@@ -1,0 +1,119 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+sub run_spat_test {
+    my $command = shift || die "Usage: $0 <command>\n";
+    my $shell   = $ENV{SPAT_SHELL} || 'sh';
+    my $update  = $ENV{SPAT_UPDATE} || 0;
+
+    my $output_file      = "$command.out";
+    my $error_file       = "$command.err";
+    my $new_output_file  = "$output_file.new";
+    my $new_error_file   = "$error_file.new";
+    my $indentation      = $ENV{SPAT_INDENT} || '  ';  # Default to two spaces
+
+
+    if ($update) {
+        system("$command > $new_output_file 2> $new_error_file");
+        print "Snapshot updated.\n";
+        # FIND A BETTER WAY TO DEAL WITH THIS.
+        exit 0
+    } else {
+        system("$command > $new_output_file 2> $new_error_file");
+
+        my $exit_code = $? >> 8;
+
+        prepend_with_indent($new_output_file, $indentation, $exit_code);
+        prepend_with_indent($new_error_file, $indentation, $exit_code);
+
+        if (!-e $output_file) {
+          copy_file($new_output_file, $output_file);
+        }
+
+        if (!-e $error_file) {
+          copy_file($new_error_file, $error_file);
+        }
+
+        if (custom_diff($output_file, $new_output_file, $indentation) ||
+            custom_diff($error_file, $new_error_file, $indentation)) {
+            # Print diff output on failure
+            print "Test failed.\n";
+            print `diff $output_file $new_output_file`;
+            print `diff $error_file $new_error_file`;
+            exit 1;
+        } else {
+            # Remove the new files on test pass.
+            # unlink($new_output_file, $new_error_file);
+            print "All tests passed.\n";
+        }
+    }
+}
+
+sub prepend_with_indent {
+    my ($file_path, $indentation, $exit_code) = @_;
+
+    open my $fh, '<', $file_path or die "Could not open file '$file_path' $!";
+    my @lines = <$fh>;
+    close $fh;
+
+    open $fh, '>', $file_path or die "Could not open file '$file_path' $!";
+    print $fh $indentation;
+    print $fh "Exit Code: $exit_code\n";
+    print $fh map { $indentation . $_ } @lines;
+    close $fh;
+}
+
+sub custom_diff {
+    my ($orig_file, $new_file, $indentation) = @_;
+
+    my @orig_lines = read_file_lines($orig_file);
+    my @new_lines  = read_file_lines($new_file);
+
+    for my $i (0 .. $#orig_lines) {
+        my $orig_line = $orig_lines[$i];
+        my $new_line  = $new_lines[$i];
+        my $without_indent = $orig_line;
+
+        $without_indent =~ s/^$indentation//;
+
+        # This is regex
+        if ($without_indent eq $orig_line) {
+            my $regex_pattern = $orig_line;
+            my $new_line_without_indent = $new_line;
+
+            chomp($regex_pattern);
+
+            $new_line_without_indent =~ s/^$indentation//;
+
+            return 1 unless $new_line_without_indent =~ m/$regex_pattern/;
+        } elsif ($orig_line ne $new_line) {
+          return 1
+        }
+    }
+
+    return 0;
+}
+
+sub read_file_lines {
+    my ($filename) = @_;
+    open my $fh, '<', $filename or die "Could not open file '$filename' $!";
+    my @lines = <$fh>;
+    close $fh;
+    return @lines;
+}
+
+sub copy_file {
+    my ($source_file, $destination_file) = @_;
+
+    open my $source_fh, '<', $source_file or die "Could not open file '$source_file' $!";
+    open my $dest_fh, '>', $destination_file or die "Could not open file '$destination_file' $!";
+
+    print $dest_fh $_ while <$source_fh>;
+
+    close $source_fh;
+    close $dest_fh;
+}
+
+run_spat_test(@ARGV);
