@@ -4,21 +4,12 @@ Tool for testing CLI tools and their outputs.
 
 ## Usage
 
-```bash
+```bash bash
 spat spat.t
 
 echo -e '\n# Or make test.sh executable and add the spat shebang.\n'
 
 ./spat.t
-```
-```
-spat: sh spat.t > spat.t.new 2>&1
-spat: All tests passed.
-
-# Or make test.sh executable and add the spat shebang.
-
-spat: sh ./spat.t > ./spat.t.new 2>&1
-spat: All tests passed.
 ```
 
 > You can change the shell with the `SPAT_SHELL` environment variable. If none is
@@ -34,29 +25,15 @@ snapshot file while keeping your regular expressions.
 The snapshot is a file that can be edited to account for
 variable output. An example would be the current date.
 
-```bash
+```bash bash
 head -n 7 spat.t
-```
-```
-#!/usr/bin/env spat
-
-set -x
-
-# A variable line where we use a regex.
-date -I
-
 ```
 
 On every run the date can vary and the test can therefore fail for
 the wrong reasons. This can be solved by replacing the line with a regex.
 
-```bash
+```bash bash
 head -n 3 spat.t.out
-```
-```
-  + date -I
-\d{4}-[\d{2}]{2}
-  + tmp=/tmp/spat.test.sh
 ```
 
 Notice that we removed the 2 spaces and placed a regex accounts for the

@@ -17,7 +17,7 @@ sub run_spat_test {
       print("TBD\n");
       exit 1;
     } else {
-        print("spat: $shell $command > $new_output_file 2&1\n");
+        print("spat: $shell $command > $new_output_file 2>&1\n");
         system("$shell $command > $new_output_file 2>&1");
 
         my $exit_code = $? >> 8;
@@ -52,7 +52,6 @@ sub prepend_with_indent {
     close $fh;
 
     open $fh, '>', $file_path or die "Could not open file '$file_path' $!";
-    print $fh $indentation;
     print $fh map { $indentation . $_ } @lines;
     print $fh "$indentation(Exit Code: $exit_code)\n";
     close $fh;
@@ -71,7 +70,8 @@ sub custom_diff {
 
         $without_indent =~ s/^$indentation//;
 
-        # This is regex
+        # Check if pattern in out/snapshot file is a regex (does not start with
+        # indent).
         if ($without_indent eq $orig_line) {
             my $regex_pattern = $orig_line;
             my $new_line_without_indent = $new_line;
