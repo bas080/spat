@@ -1,0 +1,24 @@
+    + date -I
+\d{4}-[\d{2}]{2}
+  + tmp=/tmp/spat.test.sh
+  + echo echo hello
+  + spat /tmp/spat.test.sh
+  spat: sh /tmp/spat.test.sh > /tmp/spat.test.sh.new 2&1
+  spat: All tests passed.
+  + spat /tmp/spat.test.sh
+  spat: sh /tmp/spat.test.sh > /tmp/spat.test.sh.new 2&1
+  spat: All tests passed.
+  + echo Exit Code: 0
+  Exit Code: 0
+  + echo echo world
+  + spat /tmp/spat.test.sh
+  spat: sh /tmp/spat.test.sh > /tmp/spat.test.sh.new 2&1
+  spat: Test failed.
+  1a2
+  >   world
+  + echo Exit Code: 1
+  Exit Code: 1
+  + rm -v /tmp/spat.test.sh /tmp/spat.test.sh.out
+  removed '/tmp/spat.test.sh'
+  removed '/tmp/spat.test.sh.out'
+  (Exit Code: 0)

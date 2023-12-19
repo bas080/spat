@@ -9,44 +9,37 @@ sub run_spat_test {
     my $update  = $ENV{SPAT_UPDATE} || 0;
 
     my $output_file      = "$command.out";
-    my $error_file       = "$command.err";
-    my $new_output_file  = "$output_file.new";
-    my $new_error_file   = "$error_file.new";
+    my $new_output_file  = "$command.new";
     my $indentation      = $ENV{SPAT_INDENT} || '  ';  # Default to two spaces
 
-
     if ($update) {
-        system("$command > $new_output_file 2> $new_error_file");
-        print "Snapshot updated.\n";
-        # FIND A BETTER WAY TO DEAL WITH THIS.
-        exit 0
+      # TBD
+      print("TBD\n");
+      exit 1;
     } else {
-        system("$command > $new_output_file 2> $new_error_file");
+        print("spat: $shell $command > $new_output_file 2&1\n");
+        system("$shell $command > $new_output_file 2>&1");
 
         my $exit_code = $? >> 8;
 
         prepend_with_indent($new_output_file, $indentation, $exit_code);
-        prepend_with_indent($new_error_file, $indentation, $exit_code);
 
         if (!-e $output_file) {
           copy_file($new_output_file, $output_file);
         }
 
-        if (!-e $error_file) {
-          copy_file($new_error_file, $error_file);
-        }
 
-        if (custom_diff($output_file, $new_output_file, $indentation) ||
-            custom_diff($error_file, $new_error_file, $indentation)) {
+        if (custom_diff($output_file, $new_output_file, $indentation)) {
             # Print diff output on failure
-            print "Test failed.\n";
+            print "spat: Test failed.\n";
             print `diff $output_file $new_output_file`;
-            print `diff $error_file $new_error_file`;
             exit 1;
         } else {
             # Remove the new files on test pass.
-            # unlink($new_output_file, $new_error_file);
-            print "All tests passed.\n";
+
+            # Add ENV VAR flag to prevent removing of the .new files on success.
+            unlink($new_output_file);
+            print "spat: All tests passed.\n";
         }
     }
 }
@@ -60,8 +53,8 @@ sub prepend_with_indent {
 
     open $fh, '>', $file_path or die "Could not open file '$file_path' $!";
     print $fh $indentation;
-    print $fh "Exit Code: $exit_code\n";
     print $fh map { $indentation . $_ } @lines;
+    print $fh "$indentation(Exit Code: $exit_code)\n";
     close $fh;
 }
 
@@ -87,7 +80,10 @@ sub custom_diff {
 
             $new_line_without_indent =~ s/^$indentation//;
 
-            return 1 unless $new_line_without_indent =~ m/$regex_pattern/;
+            if (not $new_line_without_indent =~ m/$regex_pattern/) {
+                print "spat: diff: $regex_pattern $new_line_without_indent";
+                return 1;
+            }
         } elsif ($orig_line ne $new_line) {
           return 1
         }
